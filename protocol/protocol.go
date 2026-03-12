@@ -33,6 +33,7 @@ const (
 	ProtoRep        = mangos.ProtoRep
 	ProtoPush       = mangos.ProtoPush
 	ProtoPull       = mangos.ProtoPull
+	ProtoBeacon     = mangos.ProtoBeacon
 	ProtoSurveyor   = mangos.ProtoSurveyor
 	ProtoRespondent = mangos.ProtoRespondent
 	ProtoBus        = mangos.ProtoBus

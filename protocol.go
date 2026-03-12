@@ -121,6 +121,7 @@ const (
 	ProtoRep        = 0x31
 	ProtoPush       = 0x50
 	ProtoPull       = 0x51
+	ProtoBeacon     = 0x60
 	ProtoSurveyor   = 0x62
 	ProtoRespondent = 0x63
 	ProtoBus        = 0x70
