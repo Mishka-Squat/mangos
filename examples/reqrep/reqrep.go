@@ -17,17 +17,17 @@
 //
 // To use:
 //
-//   $ go build .
-//   $ url=tcp://127.0.0.1:40899
-//   $ ./reqrep node0 $url & node0=$! && sleep 1
-//   $ ./reqrep node1 $url
-//   $ kill $node0
-//
+//	$ go build .
+//	$ url=tcp://127.0.0.1:40899
+//	$ ./reqrep node0 $url & node0=$! && sleep 1
+//	$ ./reqrep node1 $url
+//	$ kill $node0
 package main
 
 import (
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"go.nanomsg.org/mangos/v3"
@@ -75,7 +75,7 @@ func node0(url string) {
 	}
 }
 
-func node1(url string) {
+func node1(name string, url string) {
 	var sock mangos.Socket
 	var err error
 	var msg []byte
@@ -86,25 +86,41 @@ func node1(url string) {
 	if err = sock.Dial(url); err != nil {
 		die("can't dial on req socket: %s", err.Error())
 	}
-	fmt.Printf("NODE1: SENDING DATE REQUEST %s\n", "DATE")
+	fmt.Printf("%s: SENDING DATE REQUEST %s\n", name, "DATE")
 	if err = sock.Send([]byte("DATE")); err != nil {
 		die("can't send message on push socket: %s", err.Error())
 	}
 	if msg, err = sock.Recv(); err != nil {
 		die("can't receive date: %s", err.Error())
 	}
-	fmt.Printf("NODE1: RECEIVED DATE %s\n", string(msg))
+	fmt.Printf("%s: RECEIVED DATE %s\n", name, string(msg))
 	sock.Close()
 }
 
 func main() {
-	if len(os.Args) > 2 && os.Args[1] == "node0" {
-		node0(os.Args[2])
-		os.Exit(0)
-	}
-	if len(os.Args) > 2 && os.Args[1] == "node1" {
-		node1(os.Args[2])
-		os.Exit(0)
+
+	if len(os.Args) > 2 {
+		switch os.Args[1] {
+		case "all":
+			var wg sync.WaitGroup
+			wg.Go(func() {
+				node0(os.Args[2])
+			})
+			wg.Go(func() {
+				node1("node1", os.Args[2])
+			})
+			wg.Go(func() {
+				node1("node2", os.Args[2])
+			})
+			wg.Wait()
+			os.Exit(0)
+		case "node0":
+			node0(os.Args[2])
+			os.Exit(0)
+		case "node1":
+			node1("node1", os.Args[2])
+			os.Exit(0)
+		}
 	}
 	fmt.Fprintf(os.Stderr, "Usage: reqrep node0|node1 <URL>\n")
 	os.Exit(1)

@@ -20,24 +20,24 @@
 //
 // To use:
 //
-//   $ go build .
-//   $ url=tcp://127.0.0.1:40899
-//   $
-//   $ ./context server $url & server=$! && sleep 1
-//   $ ./context client $url "John"
-//   $ ./context client $url "Bill"
-//   $ ./context client $url "Mary"
-//   $ ./context client $url "Susan"
-//   $ ./context client $url "Mark"
+//	$ go build .
+//	$ url=tcp://127.0.0.1:40899
+//	$
+//	$ ./context server $url & server=$! && sleep 1
+//	$ ./context client $url "John"
+//	$ ./context client $url "Bill"
+//	$ ./context client $url "Mary"
+//	$ ./context client $url "Susan"
+//	$ ./context client $url "Mark"
 //
-//   $ kill $server
-//
+//	$ kill $server
 package main
 
 import (
 	"fmt"
 	"math/rand"
 	"os"
+	"sync"
 	"time"
 
 	"go.nanomsg.org/mangos/v3"
@@ -53,7 +53,7 @@ func die(format string, v ...interface{}) {
 	os.Exit(1)
 }
 
-/**
+/*
 This function will act as the server. It will create a single REP socket and a pool of worker go routines that will
 simultaneously service requests from many clients. This means that two clients can both send a request to the
 server and the server can deal with both of them concurrently. The server does not need to
@@ -67,6 +67,9 @@ func server(url string) {
 	if sock, err = rep.NewSocket(); err != nil {
 		die("can't get new rep socket: %s", err)
 	}
+	sock.SetPipeEventHook(func(pe mangos.PipeEvent, p mangos.Pipe) {
+		fmt.Printf("Pipe event %d\n", pe)
+	})
 	if err = sock.Listen(url); err != nil {
 		die("can't listen on rep socket: %s", err.Error())
 	}
@@ -147,16 +150,29 @@ func client(url, msg string) {
 }
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
+	if len(os.Args) > 2 {
+		switch os.Args[1] {
+		case "all":
+			var wg sync.WaitGroup
+			wg.Go(func() {
+				server(os.Args[2])
+			})
+			for _, name := range []string{"John", "Bill", "Mary", "Susan", "Mark"} {
+				wg.Go(func() {
+					client(os.Args[2], name)
+				})
+			}
+			wg.Wait()
+			os.Exit(0)
+		case "server":
+			server(os.Args[2])
+			os.Exit(0)
+		case "client":
+			client(os.Args[2], os.Args[3])
+			os.Exit(0)
+		}
+	}
 
-	if len(os.Args) > 2 && os.Args[1] == "server" {
-		server(os.Args[2])
-		os.Exit(0)
-	}
-	if len(os.Args) > 2 && os.Args[1] == "client" {
-		client(os.Args[2], os.Args[3])
-		os.Exit(0)
-	}
 	fmt.Fprintf(os.Stderr, "Usage: context server <URL>\n")
 	fmt.Fprintf(os.Stderr, "       context client <URL> <MSG>\n")
 	os.Exit(1)
