@@ -21,6 +21,7 @@ package ipc
 
 import (
 	"net"
+	"strings"
 	"sync"
 
 	"github.com/Microsoft/go-winio"
@@ -118,7 +119,8 @@ func (l *listener) Listen() error {
 	}
 	l.lock.Unlock()
 
-	listener, err := winio.ListenPipe("\\\\.\\pipe\\"+l.path, config)
+	spath := strings.ReplaceAll(l.path, "/", "\\")
+	listener, err := winio.ListenPipe("\\\\.\\pipe\\"+spath, config)
 	if err != nil {
 		return err
 	}
