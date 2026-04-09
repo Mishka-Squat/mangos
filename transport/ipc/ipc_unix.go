@@ -1,3 +1,4 @@
+//go:build !windows && !plan9 && !js
 // +build !windows,!plan9,!js
 
 // Copyright 2021 The Mangos Authors
@@ -305,8 +306,8 @@ func (t ipcTran) NewListener(addr string, sock mangos.Socket) (transport.Listene
 	}
 
 	// ignoring the errors, as it cannot fail.
-	l.addr, _ = net.ResolveUnixAddr("unix", addr)
-	return l, nil
+	l.addr, err = net.ResolveUnixAddr("unix", addr)
+	return l, err
 }
 
 func isSyscallError(err error, code syscall.Errno) bool {
